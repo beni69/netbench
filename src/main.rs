@@ -10,7 +10,7 @@ use std::{
 
 const DEFAULT_PORT: u16 = 42069;
 const PINGS: usize = 100;
-const RUNS: usize = 10000;
+const RUNS: usize = 1000;
 const BUFSIZE: usize = 2usize.pow(18);
 
 #[derive(Debug, Parser)]
@@ -101,6 +101,7 @@ fn server_handle(mut stream: TcpStream) -> std::io::Result<()> {
     state.next();
     read_test(&mut stream, false)?;
 
+    state.next();
     Ok(())
 }
 
@@ -139,12 +140,11 @@ fn client(addr: String) -> std::io::Result<()> {
 
     state.next();
     read_test(&mut stream, true)?;
-    // println!("Average read: {r:.3}ms\t{:.3}mb/s", mbps(r));
 
     state.next();
     write_test(&mut stream, true)?;
-    // println!("Average write: {w:.3}ms\t{:.3}mb/s", mbps(w));
 
+    state.next();
     Ok(())
 }
 
@@ -188,14 +188,14 @@ fn read_test(stream: &mut TcpStream, term: bool) -> std::io::Result<f32> {
 
         if let Some(bar) = &bar {
             bar.inc(BUFSIZE as u64);
-            bar.set_message(format!("{:.3}mb/s", mbps(res[i])));
+            bar.set_message(speedfmt(res[i]));
         }
     }
     t.join().unwrap();
 
     let avg = res.iter().sum::<f32>() / RUNS as f32;
     if let Some(bar) = bar {
-        bar.finish_with_message(format!("{:.3}mb/s", mbps(avg)));
+        bar.finish_with_message(speedfmt(avg));
     }
 
     Ok(avg)
@@ -227,22 +227,33 @@ fn write_test(stream: &mut TcpStream, term: bool) -> std::io::Result<f32> {
 
         if let Some(bar) = &bar {
             bar.inc(BUFSIZE as u64);
-            bar.set_message(format!("{:.3}mb/s", mbps(res[i])));
+            bar.set_message(speedfmt(res[i]));
         }
     }
     t.join().unwrap();
 
     let avg = res.iter().sum::<f32>() / RUNS as f32;
     if let Some(bar) = bar {
-        bar.finish_with_message(format!("{:.3}mb/s", mbps(avg)));
+        bar.finish_with_message(speedfmt(avg));
     }
 
     Ok(avg)
 }
 
-// turn a number of milliseconds into megabytes per second
-fn mbps(ms: f32) -> f32 {
-    (BUFSIZE as f32 / 1024.0 / 1024.0) / (ms / 1000.0)
+#[allow(non_snake_case)]
+fn speedfmt(ms: f32) -> String {
+    let Bps = (BUFSIZE as f32 / ms) * 1000.0;
+    let bps = Bps * 8.0;
+
+    format!("{}/s - {}/s", bfmt(bps, 'b', 0), bfmt(Bps, 'B', 0))
+}
+fn bfmt(b: f32, q: char, lvl: usize) -> String {
+    let lvls = ["", "K", "M", "G", "T", "P", "E", "Z", "Y"];
+    if b >= 1000.0 {
+        bfmt(b / 1000.0, q, lvl + 1)
+    } else {
+        format!("{:.1}{}{}", b, lvls[lvl], q)
+    }
 }
 
 fn bar() -> ProgressBar {
