@@ -5,6 +5,8 @@ use and to be able to run on a wide variety of platforms.
 
 ## Usage
 
+[![asciicast](https://asciinema.org/a/Sh9CEM3qCtlkfl179WD1grCVc.svg)](https://asciinema.org/a/Sh9CEM3qCtlkfl179WD1grCVc)
+
 ### Server
 
 ```
