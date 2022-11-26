@@ -3,14 +3,15 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::{
     io::{Read, Write},
     net::{TcpListener, TcpStream},
+    sync::mpsc::channel,
     thread,
     time::Instant,
 };
 
 const DEFAULT_PORT: u16 = 42069;
 const PINGS: usize = 100;
-const RUNS: usize = 1000;
-const BUFSIZE: usize = 2usize.pow(20);
+const RUNS: usize = 10000;
+const BUFSIZE: usize = 2usize.pow(18);
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -166,25 +167,32 @@ fn get_chunk() -> [u8; BUFSIZE] {
 
 fn read_test(stream: &mut TcpStream, term: bool) -> std::io::Result<f32> {
     let mut res = [0.0; RUNS];
-    let bar = if term {
-        // Some(ProgressBar::new(RUNS as u64))
-        Some(bar())
-    } else {
-        None
-    };
+    let bar = if term { Some(bar()) } else { None };
+
+    let (tx, rx) = channel::<f32>();
+    let t = thread::spawn({
+        let mut stream = stream.try_clone()?;
+        move || {
+            for _ in 0..RUNS {
+                let now = Instant::now();
+                stream.read_exact(&mut [0; BUFSIZE]).unwrap();
+                tx.send(now.elapsed().as_nanos() as f32 / 1_000_000.0)
+                    .unwrap();
+            }
+        }
+    });
+
     for i in 0..RUNS {
-        let now = Instant::now();
-        let mut buffer = [0; BUFSIZE];
-        stream.read_exact(&mut buffer)?;
-
-        res[i] = now.elapsed().as_nanos() as f32 / 1_000_000.0;
-
+        res[i] = rx.recv().unwrap();
         stream.write_all(&(i as u64).to_be_bytes())?;
+
         if let Some(bar) = &bar {
             bar.inc(BUFSIZE as u64);
             bar.set_message(format!("{:.3}mb/s", mbps(res[i])));
         }
     }
+    t.join().unwrap();
+
     let avg = res.iter().sum::<f32>() / RUNS as f32;
     if let Some(bar) = bar {
         bar.finish_with_message(format!("{:.3}mb/s", mbps(avg)));
@@ -195,27 +203,35 @@ fn read_test(stream: &mut TcpStream, term: bool) -> std::io::Result<f32> {
 
 fn write_test(stream: &mut TcpStream, term: bool) -> std::io::Result<f32> {
     let mut res = [0.0; RUNS];
-    let bar = if term {
-        // Some(ProgressBar::new(RUNS as u64))
-        Some(bar())
-    } else {
-        None
-    };
-    let chunk = get_chunk();
+    let bar = if term { Some(bar()) } else { None };
+
+    let (tx, rx) = channel::<f32>();
+    let t = thread::spawn({
+        let mut stream = stream.try_clone()?;
+        move || {
+            let chunk = get_chunk();
+            for _ in 0..RUNS {
+                let now = Instant::now();
+                stream.write_all(&chunk).unwrap();
+                tx.send(now.elapsed().as_nanos() as f32 / 1_000_000.0)
+                    .unwrap();
+            }
+        }
+    });
+
     for i in 0..RUNS {
-        let now = Instant::now();
-        stream.write_all(&chunk)?;
-
-        res[i] = now.elapsed().as_nanos() as f32 / 1_000_000.0;
-
+        res[i] = rx.recv().unwrap();
         let mut b = [0; 8];
         stream.read_exact(&mut b)?;
         assert_eq!(u64::from_be_bytes(b), i as u64, "out of sync");
+
         if let Some(bar) = &bar {
             bar.inc(BUFSIZE as u64);
             bar.set_message(format!("{:.3}mb/s", mbps(res[i])));
         }
     }
+    t.join().unwrap();
+
     let avg = res.iter().sum::<f32>() / RUNS as f32;
     if let Some(bar) = bar {
         bar.finish_with_message(format!("{:.3}mb/s", mbps(avg)));
