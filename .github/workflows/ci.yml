@@ -1,0 +1,45 @@
+on: [push,pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    
+    runs-on: ${{ matrix.os }}
+    continue-on-error: false
+    name: Build - ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          profile: minimal
+          components: clippy
+          default: true
+          override: true
+      - name: run clippy
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose --release --target ${{ matrix.target }}
+          use-cross: true
+      - uses: actions/upload-artifact@v3
+        with:
+          name: netbench-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/release/netbench
+            target/${{ matrix.target }}/release/netbench.exe
+          if-no-files-found: error

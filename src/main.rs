@@ -93,6 +93,7 @@ fn server_handle(mut stream: TcpStream) -> std::io::Result<()> {
         let mut buffer = [0; 4];
         stream.read_exact(&mut buffer)?;
         stream.write_all(b"pong")?;
+        assert_eq!(&buffer, b"ping");
     }
 
     state.next();
@@ -132,6 +133,7 @@ fn client(addr: String) -> std::io::Result<()> {
         let mut buffer = [0; 4];
         stream.read_exact(&mut buffer)?;
         pings[i] = now.elapsed().as_nanos() as f32 / 1_000_000.0;
+        assert_eq!(&buffer, b"pong");
     }
     println!(
         "Average ping: {}ms",
