@@ -1,21 +1,4 @@
-# { lib, fetchFromGitHub, rustPlatform }:
-
-# { pkgs ? (import <nixpkgs> { }).pkgsMusl }:
-# with pkgs;
-
-# with (import <nixpkgs> { });
-
-{ ... }:
-with (import <nixpkgs> {
-  overlays = [
-    # (import (fetchTarball "https://github.com/oxalica/rust-overlay/archive/master.tar.gz"))
-  ];
-  # crossSystem = (import <nixpkgs/lib>).systems.examples.musl64 // {
-  crossSystem = rec {
-    system = "x86_64-unknown-linux-musl";
-    rustc.config = system;
-  };
-});
+{ lib, rustPlatform, fetchFromGitHub, fetchCrate }:
 
 rustPlatform.buildRustPackage rec {
   pname = "netbench";

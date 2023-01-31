@@ -1,7 +1,8 @@
-{ pkgs ? import <nixpkgs> { } }:
+{ pkgs ? (import <nixpkgs> { }) }:
 
 let
-  netbench = import ./default.nix { };
+  # netbench = pkgs.callPackage ./default.nix { };
+  netbench = import ./musl.nix { };
 in
 pkgs.dockerTools.buildImage {
   name = "netbench-docker";
