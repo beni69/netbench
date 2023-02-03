@@ -71,7 +71,7 @@
           musl = mkCrate { musl = true; };
           docker = mkDocker { musl = true; };
 
-          aarch64 = mkCrate { crossSystem = "aarch64-linux"; };
+          default-aarch64 = mkCrate { crossSystem = "aarch64-linux"; };
           musl-aarch64 = mkCrate { musl = true; crossSystem = "aarch64-linux"; };
           docker-aarch64 = mkDocker { musl = true; crossSystem = "aarch64-linux"; };
         };
