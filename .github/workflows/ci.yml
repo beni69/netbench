@@ -20,7 +20,7 @@ jobs:
         name: beni
         authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
         cachixArgs: "-j8 -c16"
-        pushFilter: "(-source$|nixpkgs\\.tar\\.gz$|rust|cargo)"
+        pushFilter: "(-source$|nixpkgs\\.tar\\.gz$|rust|cargo|mkDummySrc$)"
     - run: nix flake show
     - run: nix build .#default${{ matrix.target-suffix }}
     - run: nix build .#musl${{ matrix.target-suffix }}
