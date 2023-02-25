@@ -1,5 +1,10 @@
 {
-  description = "netbench";
+  description = "A simple network benchmarking tool";
+
+  nixConfig = {
+    substituters = [ "https://beni.cachix.org" ];
+    trusted-public-keys = [ "beni.cachix.org-1:v75ymNNwbn70Eo+x/WFHbpKraAW1DxbzZz7WDCDN3l0=" ];
+  };
 
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-22.11";
