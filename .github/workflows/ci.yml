@@ -1,45 +1,62 @@
-on: [push,pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  nixbuild:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
-        include:
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-    
-    runs-on: ${{ matrix.os }}
-    continue-on-error: false
-    name: Build - ${{ matrix.target }}
+        target-suffix: ["", "-aarch64"]
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          profile: minimal
-          components: clippy
-          default: true
-          override: true
-      - name: run clippy
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose --release --target ${{ matrix.target }}
-          use-cross: true
-      - uses: actions/upload-artifact@v3
-        with:
-          name: netbench-${{ matrix.target }}
-          path: |
-            target/${{ matrix.target }}/release/netbench
-            target/${{ matrix.target }}/release/netbench.exe
-          if-no-files-found: error
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v18
+      with:
+        nix_path: nixpkgs=channel:nixos-22.11
+    - uses: cachix/cachix-action@v12
+      with:
+        name: beni
+        authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+        cachixArgs: "-j8 -c16"
+        pushFilter: "(-source$|nixpkgs\\.tar\\.gz$|rust|cargo|mkDummySrc$)"
+    - run: nix flake show
+    - run: nix build .#default${{ matrix.target-suffix }}
+    - run: nix build .#musl${{ matrix.target-suffix }}
+    - run: nix build .#docker${{ matrix.target-suffix }}
+
+  dockerhub:
+    runs-on: ubuntu-latest
+    needs: nixbuild
+    steps:
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v18
+      with:
+        nix_path: nixpkgs=channel:nixos-22.11
+    - uses: cachix/cachix-action@v12
+      with:
+        name: beni
+        skipPush: true
+    - uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - run: nix run .#dockerTag
+
+  winbuild:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install rust
+      run: rustup toolchain install stable
+    - run: cargo build --verbose --release
+    - uses: actions/upload-artifact@v3
+      with:
+        name: netbench-x86_64-pc-windows-msvc
+        path: target/release/netbench.exe
+        if-no-files-found: error
