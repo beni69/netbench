@@ -91,7 +91,7 @@
               let
                 version = with builtins; (fromTOML (readFile ./Cargo.toml)).package.version;
                 sk = "${skopeo}/bin/skopeo";
-                d = "${docker}/bin/docker";
+                d = "${pkgs.docker}/bin/docker";
               in
               toString (writeShellScript "dockerTag.sh" ''
                 nix build .#docker
