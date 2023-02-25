@@ -2,8 +2,8 @@
   description = "A simple network benchmarking tool";
 
   nixConfig = {
-    substituters = [ "https://beni.cachix.org" ];
-    trusted-public-keys = [ "beni.cachix.org-1:v75ymNNwbn70Eo+x/WFHbpKraAW1DxbzZz7WDCDN3l0=" ];
+    extra-substituters = [ "https://beni.cachix.org" ];
+    extra-trusted-public-keys = [ "beni.cachix.org-1:v75ymNNwbn70Eo+x/WFHbpKraAW1DxbzZz7WDCDN3l0=" ];
   };
 
   inputs = {
@@ -50,8 +50,7 @@
         };
       mkDocker = localSystem: { pkgs ? import nixpkgs { inherit crossSystem localSystem; }, crossSystem ? localSystem, musl ? false, debug ? false }:
         let
-          pkgs = (import nixpkgs { inherit localSystem crossSystem; });
-          netbench = mkCrate { inherit crossSystem musl; };
+          netbench = mkCrate localSystem { inherit crossSystem musl; };
           busybox = pkgs.busybox.override { enableStatic = true; useMusl = true; }; # unbloated "debug env"
         in
         with pkgs; with dockerTools; buildImage {
