@@ -16,28 +16,35 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - uses: cachix/install-nix-action@v18
+    - uses: cachix/install-nix-action@v20
       with:
-        nix_path: nixpkgs=channel:nixos-22.11
+        nix_path: nixpkgs=channel:nixos-23.05
     - uses: cachix/cachix-action@v12
       with:
         name: beni
         authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
         cachixArgs: "-j8 -c16"
         pushFilter: "(-source$|nixpkgs\\.tar\\.gz$|rust|cargo|mkDummySrc$)"
+
     - run: nix flake show
     - run: nix build .#default${{ matrix.target-suffix }}
-    - run: nix build .#musl${{ matrix.target-suffix }}
     - run: nix build .#docker${{ matrix.target-suffix }}
+    - run: nix build .#musl${{ matrix.target-suffix }}
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: netbench-linux${{ matrix.target-suffix }}
+        path: result/bin/netbench
+        if-no-files-found: error
 
   dockerhub:
     runs-on: ubuntu-latest
     needs: nixbuild
     steps:
     - uses: actions/checkout@v3
-    - uses: cachix/install-nix-action@v18
+    - uses: cachix/install-nix-action@v20
       with:
-        nix_path: nixpkgs=channel:nixos-22.11
+        nix_path: nixpkgs=channel:nixos-23.05
     - uses: cachix/cachix-action@v12
       with:
         name: beni
@@ -58,6 +65,6 @@ jobs:
     - run: cargo build --verbose --release
     - uses: actions/upload-artifact@v3
       with:
-        name: netbench-x86_64-pc-windows-msvc
+        name: netbench-windows-x86_64
         path: target/release/netbench.exe
         if-no-files-found: error
