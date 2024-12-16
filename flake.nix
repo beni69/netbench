@@ -7,15 +7,8 @@
   };
 
   inputs = {
-    nixpkgs.url = "nixpkgs/nixos-22.11";
-
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs = {
-        flake-utils.follows = "flake-utils";
-        nixpkgs.follows = "nixpkgs";
-      };
-    };
+    nixpkgs.url = "nixpkgs/nixos-24.11";
+    crane.url = "github:ipetkov/crane";
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -31,7 +24,7 @@
           target = pkgs.stdenv.hostPlatform.qemuArch + "-unknown-linux-" + abi;
           TARGET = with pkgs.lib; with strings; pipe target [ (replaceChars [ "-" ] [ "_" ]) toUpper ]; # UPPERCASE_TARGET_FORMAT
           toolchain = with fenix.packages.${localSystem}; combine [ stable.cargo stable.rustc targets.${target}.stable.rust-std ];
-          craneLib = crane.lib.${localSystem}.overrideToolchain toolchain;
+          craneLib = (crane.outputs.mkLib pkgs).overrideToolchain toolchain;
         in
         with pkgs; craneLib.buildPackage {
           src = craneLib.cleanCargoSource ./.;
@@ -96,7 +89,7 @@
               toString (writeShellScript "dockerTag.sh" ''
                 nix build .#docker
                 ${sk} copy docker-archive:./result docker://ghcr.io/beni69/netbench:${version}-x86_64
-              
+
                 nix build .#docker-aarch64
                 ${sk} copy docker-archive:./result docker://ghcr.io/beni69/netbench:${version}-aarch64
 
