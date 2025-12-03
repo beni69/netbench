@@ -7,7 +7,7 @@
   };
 
   inputs = {
-    nixpkgs.url = "nixpkgs/nixos-24.11";
+    nixpkgs.url = "nixpkgs/nixos-25.11";
     crane.url = "github:ipetkov/crane";
     fenix = {
       url = "github:nix-community/fenix";
@@ -22,7 +22,7 @@
         let
           abi = if musl then "musl" else "gnu";
           target = pkgs.stdenv.hostPlatform.qemuArch + "-unknown-linux-" + abi;
-          TARGET = with pkgs.lib; with strings; pipe target [ (replaceChars [ "-" ] [ "_" ]) toUpper ]; # UPPERCASE_TARGET_FORMAT
+          TARGET = with pkgs.lib; with strings; pipe target [ (replaceStrings [ "-" ] [ "_" ]) toUpper ]; # UPPERCASE_TARGET_FORMAT
           toolchain = with fenix.packages.${localSystem}; combine [ stable.cargo stable.rustc targets.${target}.stable.rust-std ];
           craneLib = (crane.outputs.mkLib pkgs).overrideToolchain toolchain;
         in
