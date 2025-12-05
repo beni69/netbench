@@ -16,10 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - uses: cachix/install-nix-action@v20
+    - uses: cachix/install-nix-action@v31
       with:
-        nix_path: nixpkgs=channel:nixos-23.05
-    - uses: cachix/cachix-action@v12
+        nix_path: nixpkgs=channel:nixos-25.11
+    - uses: cachix/cachix-action@v15
       with:
         name: beni
         authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
@@ -31,7 +31,7 @@ jobs:
     - run: nix build .#docker${{ matrix.target-suffix }}
     - run: nix build .#musl${{ matrix.target-suffix }}
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: netbench-linux${{ matrix.target-suffix }}
         path: result/bin/netbench
@@ -42,10 +42,10 @@ jobs:
     needs: nixbuild
     steps:
     - uses: actions/checkout@v3
-    - uses: cachix/install-nix-action@v20
+    - uses: cachix/install-nix-action@v31
       with:
-        nix_path: nixpkgs=channel:nixos-23.05
-    - uses: cachix/cachix-action@v12
+        nix_path: nixpkgs=channel:nixos-25.11
+    - uses: cachix/cachix-action@v15
       with:
         name: beni
         skipPush: true
@@ -63,7 +63,7 @@ jobs:
     - name: Install rust
       run: rustup toolchain install stable
     - run: cargo build --verbose --release
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: netbench-windows-x86_64
         path: target/release/netbench.exe
